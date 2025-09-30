@@ -3,7 +3,7 @@ pipeline {
   environment {
     SSH_CREDENTIALS_ID = 'wso2-ssh-key'                   
     IAM_HOME = '/Users/alfarkaleel/Wso2-Utils/Identity-servers/wso2is-5.11.0'
-    DEPLOYMENT_FILE_PATH = '${IAM_HOME}/repository/conf/deployment.toml'
+    DEPLOYMENT_FILE_PATH = '/Users/alfarkaleel/Wso2-Utils/Identity-servers/wso2is-5.11.0/repository/conf/deployment.toml'
 
   }
   stages {
