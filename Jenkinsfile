@@ -33,6 +33,7 @@ pipeline {
             sh wso2server.sh stop || true
             echo "Successfully stopped  WSO2 IAM server..."
             """
+            sleep 15
         }
       }
     }   
