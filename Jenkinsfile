@@ -23,7 +23,7 @@ pipeline {
             }
         }
 
-    stage('Stop WSO2') {
+    stage('Restart WSO2 IAM') {
       steps {
         sshagent (credentials: [env.SSH_CREDENTIALS_ID]) {
           sh """
@@ -32,25 +32,16 @@ pipeline {
             echo "Stopping WSO2 server..."
             sh wso2server.sh stop || true
             echo "Successfully stopped  WSO2 IAM server..."
-            """
             sleep 15
-        }
-      }
-    }   
-
-    stage('Start WSO2') {
-      steps {
-        sshagent (credentials: [env.SSH_CREDENTIALS_ID]) {
-          sh """
-            set -e
-            cd ${IAM_HOME}/bin
             echo "Going to start WSO2 IAM server..."
             JENKINS_NODE_COOKIE=dontKillMe nohup ./wso2server.sh start &
             echo "Successfully started  WSO2 IAM server..."
             """
+           
         }
       }
-    } 
+    }   
+
 
   }
 }
