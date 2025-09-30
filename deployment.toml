@@ -1,0 +1,142 @@
+[server]
+hostname = "localhost"
+node_ip = "127.0.0.1"
+base_path = "https://$ref{server.hostname}:${carbon.management.port}"
+
+[super_admin]
+username = "admin"
+password = "admin"
+create_admin_account = true
+
+[user_store]
+type = "read_write_ldap_unique_id"
+connection_url = "ldap://localhost:${Ports.EmbeddedLDAP.LDAPServerPort}"
+connection_name = "uid=admin,ou=system"
+connection_password = "admin"
+base_dn = "dc=wso2,dc=org"     
+ #refers the base dn on which the user and group search bases will be generated
+
+[database.identity_db]
+type = "h2"
+url = "jdbc:h2:./repository/database/WSO2IDENTITY_DB;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=60000"
+username = "wso2carbon"
+password = "wso2carbon"
+
+#[database.identity_db]
+#type = "mysql"
+#url= "jdbc:mysql://localhost:3306/wso2identity_db?useSSL=false"
+#username = "root"
+#password="Admin1993"
+
+[database.shared_db]
+type = "h2"
+url = "jdbc:h2:./repository/database/WSO2SHARED_DB;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=60000"
+username = "wso2carbon" 
+password = "wso2carbon"
+
+
+[keystore.primary]
+file_name = "wso2carbon.jks"
+password = "wso2carbon"
+
+[truststore]
+file_name="client-truststore.jks"
+password="wso2carbon"
+type="JKS"
+
+[account_recovery.endpoint.auth]
+hash= "66cd9688a2ae068244ea01e70f0e230f5623b7fa4cdecb65070a09ec06452262"
+
+[identity.auth_framework.endpoint]
+app_password= "dashboard"
+
+[[event_handler]]
+name= "passwordExpiry"
+subscriptions =["POST_UPDATE_CREDENTIAL", "POST_UPDATE_CREDENTIAL_BY_ADMIN", "POST_ADD_USER"]
+[event_handler.properties]
+passwordExpiryInDays= "30"
+enableDataPublishing= false
+priorReminderTimeInDays= "0"
+
+
+# http://wso2is.local:8080
+[cors]
+allowed_origins = ["http://wso2is.local:8080"]
+supported_methods = ["GET","HEAD", "POST", "OPTIONS"]
+exposed_headers = [ "Location" ]
+
+# [[oauth.custom_grant_type]] 
+# name = "passwordGrant" 
+# handler_class = "org.wso2.sample.identity.oauth2.grant.password.ModifiedAccessTokenPasswordGrant" 
+
+[oauth.grant_type.password] 
+grant_handler="org.wso2.sample.identity.oauth2.grant.password.ModifiedAccessTokenPasswordGrant"
+# enable_password_expiry_validation = true
+
+
+[event.default_listener.governance_identity_mgt]
+priority= "95"
+enable = true
+[event.default_listener.governance_identity_store]
+priority= "97"
+enable = true
+data_store = "org.wso2.carbon.identity.governance.store.UserStoreBasedIdentityDataStore"
+
+
+[[oauth.custom_response_type]]  # Advanced
+class = "org.wso2.sample.identity.oauth2.grant.password.ModifiedAccessTokenPasswordGrant"
+# The KeyStore which is used for encrypting/decrypting internal data. By default the primary keystore is used as the internal keystore.
+
+[oauth.token_generation]
+access_token_type = "self_contained"
+
+# [analytics.elk]
+# enable=true
+
+
+# Publish login data
+[identity_mgt.analytics_login_data_publisher]
+enable=true
+
+# Publish session data 
+[identity_mgt.analytics_session_data_publisher]
+enable=true
+
+[analytics]
+publish_password_grant_logins = true
+# The above config will add password grant logins to the login data publisher
+publish_active_session_count = false 
+# Enabling the above config will run an aggregation query to calculate the total session count each time a user logs in. Which will significantly increase the load on the DB. However, if you need the current total session count, you can enable this config.
+
+#[keystore.internal]
+#file_name = "$ref{keystore.primary.file_name}"
+#type = "$ref{keystore.primary.type}"
+#password = "$ref{keystore.primary.password}"
+#alias = "$ref{keystore.primary.alias}"
+#key_password = "$ref{keystore.primary.key_password}"
+
+# The KeyStore which is used for tls communication. By default the primary keystore is used as the tls keystore.
+
+#[keystore.tls]
+#file_name = "$ref{keystore.primary.file_name}"
+#type = "$ref{keystore.primary.type}"
+#password = "$ref{keystore.primary.password}"
+#alias = "$ref{keystore.primary.alias}"
+#key_password = "$ref{keystore.primary.key_password}"
+
+#Google reCAPTCHA settings.
+
+#[recaptcha]
+#enabled = "true"
+#api_url = "https://www.google.com/recaptcha/api.js"
+#verify_url = "https://www.google.com/recaptcha/api/siteverify"
+#site_key = ""
+#secret_key = ""
+
+# SMTP email sender settings.
+#[output_adapter.email]
+#from_address= "abcd@gmail.com"
+#username= "abcd"
+#password= "xxxx"
+#hostname= "smtp.gmail.com"
+#port= 587
