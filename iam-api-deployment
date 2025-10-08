@@ -103,19 +103,21 @@ pipeline {
         stage('Deploy Artifact to WSO2 MI') {
             steps {
                 script {
-                sh """
+               
                 echo "Deploying ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar to WSO2 IAM"
                 if (env.SELECTED_LOCATION == 'dropins') {
                         echo "Deploying in droins.folder"
+                         sh """
                         rm -f ${DROPINS_FOLDER}/${env.SELECTED_API}-*.jar
                         cp ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar ${DROPINS_FOLDER}
+                        """
                     } else {
                         echo "Deploying in lib folder"
+                         sh """
                         rm -f ${LIB_FOLDER}/${env.SELECTED_API}-*.jar
-                        cp ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar ${LIB_FOLDER}          
+                        cp ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar ${LIB_FOLDER}   
+                         """       
                     }
-
-                """
                 }
             }
         }
