@@ -1,0 +1,182 @@
+pipeline {
+    agent any
+
+    environment {
+        // Nexus Repository Details
+        NEXUS_URL = 'http://localhost:8081'
+        NEXUS_REPO = 'maven-releases'
+        NEXUS_CREDENTIALS = 'nexus-credentials'  // The Jenkins credentials ID you created
+        DROPINS_FOLDER = '/Users/alfarkaleel/Wso2-Utils/Identity-servers/wso2is-5.11.0/repository/components/dropins'
+        LIB_FOLDER = '/Users/alfarkaleel/Wso2-Utils/Identity-servers/wso2is-5.11.0/repository/components/lib'
+    }
+
+    stages {
+
+        stage('Select API') {
+            steps {
+                script {
+                    // Fetch available APIs from Nexus
+                    def apis = getApisFromNexus()
+                    apis = apis.toSet().toList()
+                    // Present API choices to the user
+                    def selectedApi = input(
+                        message: 'Select the API',
+                        parameters: [
+                            choice(name: 'API', choices: apis, description: 'Select the API you want to deploy')
+                        ]
+                    )
+
+                    echo "Selected API: ${selectedApi}"
+
+                    // Store the selected API for use in the version selection
+                    env.SELECTED_API = selectedApi
+                }
+            }
+        }
+
+
+         stage('Select Location') {
+            steps {
+                script {          
+                    // Present API choices to the user
+                    def selectedLocation = input(
+                        message: 'Select the location',
+                        parameters: [
+                            choice(name: 'Location', choices: ['dropins', 'lib'], description: 'Select the folder you want to deploy')
+                        ]
+                    )
+
+                    echo "You selected location: ${selectedLocation}"
+                    env.SELECTED_LOCATION = selectedLocation
+                    // Decide further based on user input
+                    // if (location == 'dropins') {      
+                    // } else {
+                       
+                    // }
+                }
+            }
+        }
+
+        stage('Select Version') {
+            steps {
+                script {
+                    // Fetch available versions for the selected API
+                    def versions = getVersionsFromNexus(env.SELECTED_API)
+
+                    // Present version choices to the user
+                    def selectedVersion = input(
+                        message: 'Select the Version',
+                        parameters: [
+                            choice(name: 'VERSION', choices: versions, description: 'Select the version to deploy')
+                        ]
+                    )
+                    echo "Selected Version: ${selectedVersion}"
+                    // Store the selected version for future steps
+                    env.SELECTED_VERSION = selectedVersion
+                }
+            }
+        }
+
+        stage('Pull Artifact from Nexus') {
+            steps {
+                script {
+                    // Get the selected artifact version and name
+                    // def artifactVersion = params.ARTIFACT_VERSION
+                    // def artifactName = params.ARTIFACT_NAME
+
+                        // If no previous build exists, start with the base version
+                        // def artifactPath = "com/example/wso2/${artifactName}/${artifactVersion}/${artifactName}-${artifactVersion}.car"
+                        def artifactPath = "com/example/customgrant/apis/${env.SELECTED_API}/${env.SELECTED_VERSION}/${env.SELECTED_API}-${env.SELECTED_VERSION}.jar"
+
+                    // Use curl to download the artifact from Nexus
+                    withCredentials([usernamePassword(credentialsId: NEXUS_CREDENTIALS, usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                        sh """
+                            echo "Downloading artifact ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar from Nexus"
+                            curl -u ${NEXUS_USER}:${NEXUS_PASS} -O ${NEXUS_URL}/repository/${NEXUS_REPO}/${artifactPath}
+                        """
+                    }
+                }
+            }
+        }
+
+
+        stage('Deploy Artifact to WSO2 MI') {
+            steps {
+                script {
+                sh """
+                echo "Deploying ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar to WSO2 IAM"
+                if (env.SELECTED_LOCATION == 'dropins') {
+                        echo "Deploying in droins.folder"
+                        rm -f ${DROPINS_FOLDER}/${env.SELECTED_API}-*.jar
+                        cp ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar ${DROPINS_FOLDER}
+                    } else {
+                        echo "Deploying in lib folder"
+                        rm -f ${LIB_FOLDER}/${env.SELECTED_API}-*.jar
+                        cp ${env.SELECTED_API}-${env.SELECTED_VERSION}.jar ${LIB_FOLDER}          
+                    }
+
+                """
+                }
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo 'Successfully deployed the selected artifact to WSO2 IAM.'
+        }
+
+        failure {
+            echo 'Failed to deploy the selected artifact to WSO2 IAM.'
+        }
+    }
+}
+
+ def getApisFromNexus() {
+        def url = "${NEXUS_URL}/service/rest/v1/components?repository=maven-releases"
+
+        // HTTP request to fetch components from Nexus
+        def response = httpRequest(
+            url: url,
+            authentication: 'nexus-credentials',  // Use Jenkins credentials for Nexus authentication
+            validResponseCodes: '200',
+            consoleLogResponseBody: true
+        )
+
+
+         // Get the response body as a String
+    def responseBody = response.getContent()  // This will convert the ResponseContentSupplier to String
+
+    // Parse the response as JSON using Groovy's JsonSlurper
+    def jsonResponse = new groovy.json.JsonSlurper().parseText(responseBody)
+
+    // Extract the names (artifactIds) from the Nexus components list
+    def apis = jsonResponse.items.collect { it.name }
+
+        return apis
+     }
+
+    // Helper method to fetch versions for a selected API from Nexus
+    def getVersionsFromNexus(api) {
+        def url = "${NEXUS_URL}/service/rest/v1/components?repository=maven-releases&name=${api}"
+
+        // HTTP request to fetch versions of the selected API
+        def response = httpRequest(
+            url: url,
+            authentication: 'nexus-credentials',  // Use Jenkins credentials for Nexus authentication
+            validResponseCodes: '200',
+            consoleLogResponseBody: true
+        )
+
+           // Get the response body as a String
+        def responseBody = response.getContent()  // This will convert the ResponseContentSupplier to String
+
+    // Parse the response as JSON using Groovy's JsonSlurper
+        def jsonResponse = new groovy.json.JsonSlurper().parseText(responseBody)
+
+        // Extract the versions for the selected API
+        def versions = jsonResponse.items.collect { it.version }
+
+        return versions
+    }
